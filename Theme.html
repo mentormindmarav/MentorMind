@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Landing Page Replica</title>
+    <link href="https://googleapis.com" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        body { background-color: #fff; color: #333; overflow-x: hidden; }
+
+        /* Header & Nav */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 80px;
+            position: absolute;
+            width: 100%;
+            z-index: 10;
+        }
+        nav ul { display: flex; list-style: none; }
+        nav ul li { margin-right: 30px; }
+        nav ul li a { text-decoration: none; color: white; font-size: 14px; font-weight: 500; }
+        .search-container input {
+            padding: 8px 15px;
+            border-radius: 20px;
+            border: none;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        /* Hero Section with Gradient */
+        .hero {
+            height: 80vh;
+            background: linear-gradient(135deg, #ff8a65 0%, #9c27b0 50%, #2196f3 100%);
+            color: white;
+            padding: 150px 80px 0;
+            display: flex;
+        }
+        .hero-content { width: 50%; }
+        .hero h1 { font-size: 48px; line-height: 1.2; margin-bottom: 20px; }
+        .hero p { font-size: 18px; margin-bottom: 30px; opacity: 0.9; max-width: 450px; }
+        .btn-main {
+            padding: 12px 35px;
+            border-radius: 30px;
+            border: 2px solid white;
+            background: transparent;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .btn-main:hover { background: white; color: #9c27b0; }
+
+        /* Bottom Section Cards */
+        .bottom-section {
+            padding: 0 80px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 40px;
+            position: relative;
+            top: -60px;
+        }
+        .info-card {
+            background: #1e88e5;
+            color: white;
+            padding: 40px;
+            border-radius: 5px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .text-card { padding: 20px 0; }
+        .text-card h4 { margin-bottom: 10px; color: #333; }
+        .text-card p { font-size: 14px; color: #777; line-height: 1.6; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo"><strong>LOGO</strong></div>
+        <nav>
+            <ul>
+                <li><a href="#">About</a></li>
+                <li><a href="#">Portfolio</a></li>
+                <li><a href="#">Services</a></li>
+                <li><a href="#">Contact</a></li>
+            </ul>
+        </nav>
+        <div class="search-container">
+            <input type="text" placeholder="Search">
+        </div>
+    </header>
+
+    <section class="hero">
+        <div class="hero-content">
+            <h1>Present your site<br>in the most beautiful way</h1>
+            <p>A modern layout designed to highlight your brand's unique value proposition effectively.</p>
+            <button class="btn-main">LEARN MORE</button>
+        </div>
+        <!-- Right side illustration would be placed here -->
+    </section>
+
+    <section class="bottom-section">
+        <div class="info-card">
+            <h3>WE BRIGHT AND SHARP</h3>
+            <p style="margin-top: 15px;">High-impact visuals for modern digital brands.</p>
+        </div>
+        <div class="text-card">
+            <h4>LATEST NEWS</h4>
+            <p>Stay updated with our latest industry insights and developments.</p>
+        </div>
+        <div class="text-card">
+            <h4>ABOUT US</h4>
+            <p>Our agency delivers creative solutions globally for various niches.</p>
+        </div>
+    </section>
+</body>
+</html>

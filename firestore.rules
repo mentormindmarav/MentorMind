@@ -1,0 +1,96 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users/{userId}
+    // Fields:
+    //   - uid: string (required, immutable) - Unique user ID
+    //   - displayName: string (required) - Display name
+    //   - email: string (required) - User email
+    //   - photoURL: string (optional) - Profile picture URL
+    //   - mindPowerLevel: number (required) - Cognitive level
+    //   - growthPoints: number (required) - Total points
+    //   - role: string (required, enum: ["admin", "user"]) - User role
+    //   - customVoices: list (optional) - Cloned voices metadata
+    //   - joinedAt: timestamp (required, immutable) - Creation time
+    //
+    // Collection: users/{userId}/messages/{messageId}
+    // Fields:
+    //   - text: string (required) - Message content
+    //   - sender: string (required, enum: ["user", "ai"]) - Message sender
+    //   - timestamp: timestamp (required) - Message time
+    //   - attachments: list (optional) - List of attachments
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        ((exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
+          request.auth.token.email == "maravmentormind@gmail.com");
+    }
+
+    function isValidUser(data) {
+      return data.uid == request.auth.uid &&
+             data.displayName is string &&
+             data.role in ['admin', 'user'] &&
+             (!('customVoices' in data) || data.customVoices is list);
+    }
+
+    function isValidUserUpdate(data, oldData) {
+      return isValidUser(data) &&
+             (!('uid' in oldData) || data.uid == oldData.uid) &&
+             (!('joinedAt' in oldData) || data.joinedAt == oldData.joinedAt) &&
+             (!('role' in oldData) || data.role == oldData.role || isAdmin());
+    }
+
+    function isValidMessage(data) {
+      return data.text is string &&
+             data.sender in ['user', 'ai'];
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == 'user' || isAdmin());
+      allow update: if isOwner(userId) && isValidUserUpdate(request.resource.data, resource.data);
+      allow delete: if isAdmin();
+
+      match /messages/{messageId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidMessage(request.resource.data);
+        allow update, delete: if isAdmin();
+      }
+
+      match /tasks/{taskId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create, update: if isOwner(userId);
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+
+      match /knowledge/{knowledgeId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create, update: if isOwner(userId);
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+    }
+  }
+}

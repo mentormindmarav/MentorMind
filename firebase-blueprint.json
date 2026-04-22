@@ -1,0 +1,88 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A student user of MentorMind",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique user ID" },
+        "name": { "type": "string", "description": "Display name" },
+        "email": { "type": "string", "description": "User email" },
+        "photoURL": { "type": "string", "description": "Profile picture URL" },
+        "mindPowerLevel": { "type": "number", "description": "Current cognitive development level" },
+        "growthPoints": { "type": "number", "description": "Total points earned for mind development" },
+        "sessionCount": { "type": "number", "description": "Total number of chat messages sent" },
+        "targetGrade": { "type": "string", "description": "Target academic grade (e.g., A+)" },
+        "role": { "type": "string", "enum": ["admin", "student"], "description": "User role for access control" },
+        "customVoices": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "description": { "type": "string" }
+            }
+          },
+          "description": "List of cloned voices from ElevenLabs"
+        },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Account creation timestamp" }
+      },
+      "required": ["uid", "name", "email", "role"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "A single message in a chat conversation",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string", "description": "Content of the message" },
+        "sender": { "type": "string", "enum": ["user", "ai"], "description": "Who sent the message" },
+        "timestamp": { "type": "string", "format": "date-time", "description": "When the message was sent" },
+        "attachments": { "type": "array", "description": "Optional file or image attachments" }
+      },
+      "required": ["text", "sender", "timestamp"]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "An academic task or goal",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Task description" },
+        "deadline": { "type": "string", "format": "date-time", "description": "Task deadline" },
+        "completed": { "type": "boolean", "description": "Completion status" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["title", "completed", "createdAt"]
+    },
+    "KnowledgeItem": {
+      "title": "KnowledgeItem",
+      "description": "A saved insight or code snippet from a chat",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Brief title of the insight" },
+        "content": { "type": "string", "description": "The saved information or code" },
+        "type": { "type": "string", "enum": ["insight", "code"], "description": "Type of knowledge" },
+        "timestamp": { "type": "string", "format": "date-time", "description": "When it was saved" }
+      },
+      "required": ["title", "content", "type", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile data"
+    },
+    "/users/{userId}/chats/{chatId}": {
+      "schema": "ChatMessage",
+      "description": "Chat history for a specific user"
+    },
+    "/users/{userId}/tasks/{taskId}": {
+      "schema": "Task",
+      "description": "Academic tasks for the user"
+    },
+    "/users/{userId}/knowledge/{knowledgeId}": {
+      "schema": "KnowledgeItem",
+      "description": "Saved insights and code snippets"
+    }
+  }
+}

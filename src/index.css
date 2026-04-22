@@ -1,0 +1,183 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@theme inline {
+    --font-heading: "Poppins", sans-serif;
+    --font-sans: "Inter", sans-serif;
+    --font-mono: "JetBrains Mono", monospace;
+    
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-destructive: var(--destructive);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+    
+    --radius-xl: 1rem;
+    --radius-2xl: 1.5rem;
+    --radius-3xl: 2rem;
+}
+
+:root {
+    --background: #FFFFFF;
+    --foreground: #1A1A1A;
+    --card: #FFFFFF;
+    --card-foreground: #1A1A1A;
+    --popover: #FFFFFF;
+    --popover-foreground: #1A1A1A;
+    --primary: #9C27B0; /* The magenta from Theme.tsx */
+    --primary-foreground: #FFFFFF;
+    --secondary: #F3E5F5;
+    --secondary-foreground: #9C27B0;
+    --muted: #F8FAFC;
+    --muted-foreground: #64748B;
+    --accent: #E1F5FE; /* Light blue accent */
+    --accent-foreground: #1E88E5;
+    --destructive: #EF4444;
+    --border: #E2E8F0;
+    --input: #E2E8F0;
+    --ring: #9C27B0;
+    --radius: 1rem;
+}
+
+.dark {
+    --background: #0F172A;
+    --foreground: #F8FAFC;
+    --card: #1E293B;
+    --card-foreground: #F8FAFC;
+    --popover: #0F172A;
+    --popover-foreground: #F8FAFC;
+    --primary: #9C27B0;
+    --primary-foreground: #FFFFFF;
+    --secondary: #2E1065;
+    --secondary-foreground: #9C27B0;
+    --muted: #1E293B;
+    --muted-foreground: #94A3B8;
+    --accent: #0C4A6E;
+    --accent-foreground: #38BDF8;
+    --destructive: #EF4444;
+    --border: #334155;
+    --input: #334155;
+    --ring: #9C27B0;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+}
+
+/* Atmospheric Background */
+.atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: 
+    radial-gradient(circle at 20% 20%, rgba(255, 138, 101, 0.15) 0%, transparent 40%),
+    radial-gradient(circle at 80% 80%, rgba(33, 150, 243, 0.15) 0%, transparent 40%),
+    radial-gradient(circle at 50% 50%, rgba(156, 39, 176, 0.05) 0%, transparent 60%);
+  filter: blur(80px);
+  pointer-events: none;
+}
+
+.dark .atmosphere {
+  background: 
+    radial-gradient(circle at 20% 20%, rgba(255, 138, 101, 0.2) 0%, transparent 40%),
+    radial-gradient(circle at 80% 80%, rgba(33, 150, 243, 0.2) 0%, transparent 40%),
+    radial-gradient(circle at 50% 50%, rgba(156, 39, 176, 0.1) 0%, transparent 60%);
+}
+
+/* Grid Overlay */
+.grid-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: linear-gradient(rgba(139, 92, 246, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(139, 92, 246, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(circle at 50% 50%, black, transparent 80%);
+  pointer-events: none;
+}
+
+.dark .grid-overlay {
+  background-image: linear-gradient(rgba(139, 92, 246, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(139, 92, 246, 0.05) 1px, transparent 1px);
+}
+
+/* Glass Morphism */
+.glass-panel {
+  background: var(--card);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+}
+
+.glass-card {
+  background: var(--card);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  background: var(--accent);
+  border-color: var(--primary);
+  box-shadow: 0 0 40px rgba(124, 58, 237, 0.1);
+  transform: translateY(-2px);
+}
+
+.dark .glass-card:hover {
+  box-shadow: 0 0 40px rgba(139, 92, 246, 0.15);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--secondary);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+  opacity: 0.5;
+}
+
+/* Animations */
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.02); }
+}
+
+.glow-effect {
+  animation: pulse-glow 6s infinite ease-in-out;
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, #FF8A65 0%, #9C27B0 50%, #2196F3 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}

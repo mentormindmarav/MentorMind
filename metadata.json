@@ -1,0 +1,8 @@
+{
+  "name": "MentorMind",
+  "description": "Founded by Marav.R (Class 7, Velammal Bodhi Campus), MentorMind is an AI-powered student platform for learning, image generation, and voice synthesis.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
