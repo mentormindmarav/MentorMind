@@ -536,6 +536,7 @@ export default function App() {
 
         const audioBuffer = await response.arrayBuffer();
         const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        if (audioCtx.state === 'suspended') await audioCtx.resume();
         const decodedBuffer = await audioCtx.decodeAudioData(audioBuffer);
         
         const source = audioCtx.createBufferSource();
@@ -547,18 +548,18 @@ export default function App() {
       }
 
       // Default Gemini TTS
-      const actualVoiceMapping: { [key: string]: string } = {
+      const voiceMapping: { [key: string]: string } = {
         'Robot': 'Fenrir',
-        'Male': 'Puck',
-        'Female': 'Kore',
-        'Calm': 'Zephyr',
-        'Narrator': 'Charon'
+        'Kore': 'Kore',
+        'Zephyr': 'Zephyr',
+        'Puck': 'Puck',
+        'Charon': 'Charon'
       };
       
-      const voiceName = actualVoiceMapping[selectedVoice] || 'Kore';
+      const voiceName = voiceMapping[selectedVoice] || 'Kore';
       const ttsPrompt = voiceName === 'Fenrir' 
         ? `Say this in a monotone, futuristic robotic voice: ${text}` 
-        : `Say this naturally and clearly: ${text}`;
+        : `Say this naturally and with clarity: ${text}`;
 
       const response = await ai.models.generateContent({
         model: "gemini-3.1-flash-tts-preview",
@@ -576,6 +577,7 @@ export default function App() {
       const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
       if (base64Audio) {
         const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+        if (audioCtx.state === 'suspended') await audioCtx.resume();
         const arrayBuffer = Uint8Array.from(atob(base64Audio), c => c.charCodeAt(0)).buffer;
         
         // The data is raw 16-bit PCM, let's create a buffer
@@ -620,7 +622,7 @@ export default function App() {
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image',
         contents: {
-          parts: [{ text: `A futuristic, high-tech digital illustration: ${prompt}` }],
+          parts: [{ text: `A vibrant, high-detail digital painting in a futuristic sci-fi aesthetic: ${prompt}` }],
         },
         config: {
           imageConfig: {
