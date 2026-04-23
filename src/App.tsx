@@ -348,8 +348,11 @@ export default function App() {
 
   useEffect(() => {
     const root = window.document.documentElement;
+    const body = window.document.body;
     root.classList.remove('light', 'dark');
     root.classList.add(theme);
+    body.classList.remove('light', 'dark');
+    body.classList.add(theme);
     localStorage.setItem('theme', theme);
   }, [theme]);
 
@@ -544,10 +547,18 @@ export default function App() {
       }
 
       // Default Gemini TTS
-      const actualVoice = selectedVoice === 'Robot' ? 'Fenrir' : selectedVoice;
-      const ttsPrompt = selectedVoice === 'Robot' 
+      const actualVoiceMapping: { [key: string]: string } = {
+        'Robot': 'Fenrir',
+        'Male': 'Puck',
+        'Female': 'Kore',
+        'Calm': 'Zephyr',
+        'Narrator': 'Charon'
+      };
+      
+      const voiceName = actualVoiceMapping[selectedVoice] || 'Kore';
+      const ttsPrompt = voiceName === 'Fenrir' 
         ? `Say this in a monotone, futuristic robotic voice: ${text}` 
-        : `Say this naturally: ${text}`;
+        : `Say this naturally and clearly: ${text}`;
 
       const response = await ai.models.generateContent({
         model: "gemini-3.1-flash-tts-preview",
@@ -556,7 +567,7 @@ export default function App() {
           responseModalities: [Modality.AUDIO],
           speechConfig: {
             voiceConfig: {
-              prebuiltVoiceConfig: { voiceName: actualVoice },
+              prebuiltVoiceConfig: { voiceName: voiceName as any },
             },
           },
         },
@@ -609,7 +620,7 @@ export default function App() {
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image',
         contents: {
-          parts: [{ text: `A clear, high-quality illustration: ${prompt}` }],
+          parts: [{ text: `A futuristic, high-tech digital illustration: ${prompt}` }],
         },
         config: {
           imageConfig: {
