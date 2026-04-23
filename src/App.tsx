@@ -550,6 +550,10 @@ export default function App() {
       // Default Gemini TTS
       const voiceMapping: { [key: string]: string } = {
         'Robot': 'Fenrir',
+        'Girl': 'Kore',
+        'Woman': 'Zephyr',
+        'Man': 'Puck',
+        'Deep Man': 'Charon',
         'Kore': 'Kore',
         'Zephyr': 'Zephyr',
         'Puck': 'Puck',
@@ -620,13 +624,14 @@ export default function App() {
       });
 
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-image',
+        model: 'gemini-3.1-flash-image-preview',
         contents: {
-          parts: [{ text: `A vibrant, high-detail digital painting in a futuristic sci-fi aesthetic: ${prompt}` }],
+          parts: [{ text: `A professional, breathtaking digital masterpiece on a dark canvas. Subject: ${prompt}. Style: Futuristic, bioluminescent, ultra-high resolution, cinematic lighting.` }],
         },
         config: {
           imageConfig: {
-            aspectRatio: "1:1"
+            aspectRatio: "1:1",
+            imageSize: "1K"
           }
         }
       });
@@ -711,12 +716,32 @@ export default function App() {
         attachments: currentAttachments
       });
 
+      // Prepare parts for multimodal support
+      const messageParts: any[] = [];
+      if (text) messageParts.push({ text: `Context: You are MentorMind. User message: ${text}` });
+      
+      for (const att of currentAttachments) {
+        if (att.type.startsWith('image/')) {
+          const base64Data = att.url.split(',')[1];
+          messageParts.push({
+            inlineData: {
+              data: base64Data,
+              mimeType: att.type
+            }
+          });
+        } else {
+          messageParts.push({ text: `Attachment: ${att.name}` });
+        }
+      }
+
+      if (messageParts.length === 0) messageParts.push({ text: "Hello" });
+
       // Get AI response
       const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: text || "Analyze these attachments",
+        model: "gemini-3.1-pro-preview",
+        contents: { parts: messageParts },
         config: {
-          systemInstruction: "You are MentorMind, a visionary AI mentor for MentorMind. You are encouraging, brilliant, and focused on helping students reach their cognitive potential. Keep responses concise but impactful. Use a friendly, futuristic tone."
+          systemInstruction: "You are MentorMind, a visionary AI mentor. You are encouraging, brilliant, and focused on helping students reach their cognitive potential. Keep responses concise but impactful. Use a friendly, futuristic tone. You can see and analyze multiple image attachments provided by the user."
         }
       });
 
