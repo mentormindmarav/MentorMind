@@ -609,7 +609,7 @@ export default function App() {
   };
 
   const generateAIImage = async (promptOverride?: string): Promise<string | null> => {
-    const prompt = promptOverride || inputText;
+    const prompt = (promptOverride !== undefined && promptOverride !== null) ? promptOverride : inputText;
     if (!prompt.trim() || isGeneratingImage) return null;
     
     if (!promptOverride) setInputText('');
@@ -739,13 +739,13 @@ export default function App() {
       // Get AI response
       const response = await ai.models.generateContent({
         model: "gemini-3.1-pro-preview",
-        contents: { parts: messageParts },
+        contents: [{ role: 'user', parts: messageParts }],
         config: {
-          systemInstruction: "You are MentorMind, a visionary AI mentor. You are encouraging, brilliant, and focused on helping students reach their cognitive potential. Keep responses concise but impactful. Use a friendly, futuristic tone. You can see and analyze multiple image attachments provided by the user."
+          systemInstruction: "You are MentorMind, a brilliant AI mentor founded by Marav.R. You focus on helping students reach their cognitive potential. Keep responses impactful, futuristic, and encouraging. You can analyze images perfectly. If a message is ambiguous, ask for a neural update (clarification)."
         }
       });
 
-      const aiText = response.text || "I'm processing your request...";
+      const aiText = response.text || (response.candidates?.[0]?.finishReason === 'SAFETY' ? "I'm sorry, but that request triggered my safety protocols. Let's try a different neural path!" : "Processing neural pathways... (Connection delay)");
 
       // Save AI message
       await addDoc(collection(db, 'users', user.uid, 'messages'), {
@@ -1065,112 +1065,134 @@ export default function App() {
                     </div>
                   </div>
                 ) : (
-                  messages.map((msg) => (
-                    <motion.div 
-                      key={msg.id}
-                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      transition={{ 
-                        type: "spring",
-                        stiffness: 260,
-                        damping: 20,
-                        duration: 0.3 
-                      }}
-                      className={cn(
-                        "flex gap-3 max-w-[85%]",
-                        msg.sender === 'user' ? "ml-auto flex-row-reverse" : ""
-                      )}
-                    >
-                      <div className={cn(
-                        "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-1 transition-transform hover:scale-110",
-                        msg.sender === 'user' ? "bg-primary text-white shadow-lg shadow-primary/20" : "glass-card border-primary/20"
-                      )}>
-                        {msg.sender === 'user' ? <User className="w-5 h-5" /> : <Bot className="w-5 h-5 text-primary" />}
-                      </div>
-                      <div className={cn(
-                        "space-y-2 group/msg",
-                        msg.sender === 'user' ? "items-end flex flex-col" : "items-start flex flex-col"
-                      )}>
+                  <>
+                    {messages.map((msg) => (
+                      <motion.div 
+                        key={msg.id}
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        transition={{ 
+                          type: "spring",
+                          stiffness: 260,
+                          damping: 20,
+                          duration: 0.3 
+                        }}
+                        className={cn(
+                          "flex gap-3 max-w-[85%]",
+                          msg.sender === 'user' ? "ml-auto flex-row-reverse" : ""
+                        )}
+                      >
                         <div className={cn(
-                          "p-4 rounded-2xl relative shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5",
-                          msg.sender === 'user' 
-                            ? "bg-primary text-white rounded-tr-none hover:bg-primary/95" 
-                            : "glass-panel border-white/5 rounded-tl-none font-medium leading-relaxed hover:border-primary/20"
+                          "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-1 transition-transform hover:scale-110",
+                          msg.sender === 'user' ? "bg-primary text-white shadow-lg shadow-primary/20" : "glass-card border-primary/20"
                         )}>
-                          {msg.text}
-                          
-                          <div className={cn(
-                            "flex items-center gap-2 mt-3 opacity-0 group-hover/msg:opacity-100 transition-all duration-300 transform translate-y-1 group-hover/msg:translate-y-0",
-                            msg.sender === 'user' ? "justify-end" : "justify-start"
-                          )}>
-                            {msg.sender === 'ai' && (
-                              <button 
-                                onClick={() => speakText(msg.text, msg.id)}
-                                className={cn(
-                                  "flex items-center gap-1.5 px-2 py-1 bg-white/5 hover:bg-white/10 rounded-md text-[9px] uppercase font-bold tracking-wider transition-all",
-                                  isSpeaking === msg.id ? "text-primary animate-pulse" : "text-muted-foreground/80 hover:text-primary"
-                                )}
-                              >
-                                <Volume2 className={cn("w-3 h-3", isSpeaking === msg.id && "animate-bounce")} />
-                                {isSpeaking === msg.id ? "Playing" : "Speak"}
-                              </button>
-                            )}
-                            <button 
-                              onClick={() => {
-                                navigator.clipboard.writeText(msg.text);
-                              }}
-                              className="flex items-center gap-1.5 px-2 py-1 bg-white/5 hover:bg-white/10 rounded-md text-[9px] uppercase font-bold tracking-wider text-muted-foreground/80 hover:text-primary transition-all"
-                            >
-                              <Copy className="w-3 h-3" />
-                              Copy
-                            </button>
-                          </div>
+                          {msg.sender === 'user' ? <User className="w-5 h-5" /> : <Bot className="w-5 h-5 text-primary" />}
                         </div>
-
-                        {msg.attachments && msg.attachments.length > 0 && (
+                        <div className={cn(
+                          "space-y-2 group/msg",
+                          msg.sender === 'user' ? "items-end flex flex-col" : "items-start flex flex-col"
+                        )}>
                           <div className={cn(
-                            "flex flex-wrap gap-3",
-                            msg.sender === 'user' ? "justify-end" : "justify-start"
+                            "p-4 rounded-2xl relative shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5",
+                            msg.sender === 'user' 
+                              ? "bg-primary text-white rounded-tr-none hover:bg-primary/95" 
+                              : "glass-panel border-white/5 rounded-tl-none font-medium leading-relaxed hover:border-primary/20"
                           )}>
-                            {msg.attachments.map((att, i) => (
-                              <div key={i} className="glass-card p-2 rounded-2xl border-white/5 shadow-xl group/att relative min-w-[160px] max-w-[240px]">
-                                {att.type.startsWith('image/') ? (
-                                  <div className="relative overflow-hidden rounded-xl">
-                                    <img 
-                                      src={att.url} 
-                                      alt={att.name} 
-                                      className="w-full h-auto object-cover transition-transform group-hover/att:scale-105 duration-500"
-                                      referrerPolicy="no-referrer"
-                                    />
-                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/att:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                            {msg.text}
+                            
+                            <div className={cn(
+                              "flex items-center gap-2 mt-3 opacity-0 group-hover/msg:opacity-100 transition-all duration-300 transform translate-y-1 group-hover/msg:translate-y-0",
+                              msg.sender === 'user' ? "justify-end" : "justify-start"
+                            )}>
+                              {msg.sender === 'ai' && (
+                                <button 
+                                  onClick={() => speakText(msg.text, msg.id)}
+                                  className={cn(
+                                    "flex items-center gap-1.5 px-2 py-1 bg-white/5 hover:bg-white/10 rounded-md text-[9px] uppercase font-bold tracking-wider transition-all",
+                                    isSpeaking === msg.id ? "text-primary animate-pulse" : "text-muted-foreground/80 hover:text-primary"
+                                  )}
+                                >
+                                  <Volume2 className={cn("w-3 h-3", isSpeaking === msg.id && "animate-bounce")} />
+                                  {isSpeaking === msg.id ? "Playing" : "Speak"}
+                                </button>
+                              )}
+                              <button 
+                                onClick={() => {
+                                  navigator.clipboard.writeText(msg.text);
+                                }}
+                                className="flex items-center gap-1.5 px-2 py-1 bg-white/5 hover:bg-white/10 rounded-md text-[9px] uppercase font-bold tracking-wider text-muted-foreground/80 hover:text-primary transition-all"
+                              >
+                                <Copy className="w-3 h-3" />
+                                Copy
+                              </button>
+                            </div>
+                          </div>
+
+                          {msg.attachments && msg.attachments.length > 0 && (
+                            <div className={cn(
+                              "flex flex-wrap gap-3",
+                              msg.sender === 'user' ? "justify-end" : "justify-start"
+                            )}>
+                              {msg.attachments.map((att, i) => (
+                                <div key={i} className="glass-card p-2 rounded-2xl border-white/5 shadow-xl group/att relative min-w-[160px] max-w-[240px]">
+                                  {att.type.startsWith('image/') ? (
+                                    <div className="relative overflow-hidden rounded-xl">
+                                      <img 
+                                        src={att.url} 
+                                        alt={att.name} 
+                                        className="w-full h-auto object-cover transition-transform group-hover/att:scale-105 duration-500"
+                                        referrerPolicy="no-referrer"
+                                      />
+                                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/att:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                        <button 
+                                          onClick={() => handleDownload(att.url, att.name)}
+                                          className="p-2 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full text-white transition-all hover:scale-110"
+                                          title="Download"
+                                        >
+                                          <Download className="w-5 h-5" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-2 p-2">
+                                      <FileText className="w-4 h-4 text-primary" />
+                                      <span className="text-[10px] truncate flex-1">{att.name}</span>
                                       <button 
                                         onClick={() => handleDownload(att.url, att.name)}
-                                        className="p-2 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full text-white transition-all hover:scale-110"
-                                        title="Download"
+                                        className="p-1 hover:text-primary transition-colors"
                                       >
-                                        <Download className="w-5 h-5" />
+                                        <Download className="w-3 h-3" />
                                       </button>
                                     </div>
-                                  </div>
-                                ) : (
-                                  <div className="flex items-center gap-2 p-2">
-                                    <FileText className="w-4 h-4 text-primary" />
-                                    <span className="text-[10px] truncate flex-1">{att.name}</span>
-                                    <button 
-                                      onClick={() => handleDownload(att.url, att.name)}
-                                      className="p-1 hover:text-primary transition-colors"
-                                    >
-                                      <Download className="w-3 h-3" />
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            ))}
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
+                    ))}
+                    {isLoading && (
+                      <motion.div 
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="flex gap-3 max-w-[85%]"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center animate-pulse">
+                          <Bot className="w-5 h-5 text-primary" />
+                        </div>
+                        <div className="glass-panel p-4 rounded-2xl rounded-tl-none border-white/5 flex items-center gap-2">
+                          <div className="flex gap-1">
+                            <motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1, delay: 0 }} className="w-1.5 h-1.5 rounded-full bg-primary" />
+                            <motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-1.5 h-1.5 rounded-full bg-primary" />
+                            <motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-1.5 h-1.5 rounded-full bg-primary" />
                           </div>
-                        )}
-                      </div>
-                    </motion.div>
-                  ))
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-primary/60">Neural Synthesis...</span>
+                        </div>
+                      </motion.div>
+                    )}
+                    <div ref={messagesEndRef} />
+                  </>
                 )}
                 {isRecognizing && (
                   <div className="flex gap-4 max-w-[80%]">
