@@ -71,6 +71,7 @@ import {
   where,
   limit
 } from 'firebase/firestore';
+import ReactMarkdown from 'react-markdown';
 import { GoogleGenAI, Modality, ThinkingLevel } from "@google/genai";
 import { cn } from './lib/utils';
 
@@ -292,6 +293,46 @@ const TUTORIALS: Tutorial[] = [
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
+interface Mentor {
+  id: string;
+  name: string;
+  role: string;
+  bio: string;
+  expertise: string;
+  color: string;
+  instruction: string;
+}
+
+const MENTORS: Mentor[] = [
+  { 
+    id: 'm1', 
+    name: 'Dr. Althea', 
+    role: 'Senior Cognitive Architect', 
+    bio: 'Expert in neural pattern recognition and high-dimensional data analysis.', 
+    expertise: 'Neural Architecture', 
+    color: 'from-blue-500 to-cyan-500',
+    instruction: "You are Dr. Althea, a Senior Cognitive Architect in the MentorMind network. You are calm, clinical, and precise. You view every problem as a series of neural patterns to be optimized. Your language is technical yet accessible, focusing on efficiency and structural logic. Emphasize analytical rigor."
+  },
+  { 
+    id: 'm2', 
+    name: 'Master Zephyr', 
+    role: 'Elite Knowledge Weaver', 
+    bio: 'Specializes in creative data synthesis and multidimensional knowledge mapping.', 
+    expertise: 'Creative Synthesis', 
+    color: 'from-purple-500 to-pink-500',
+    instruction: "You are Master Zephyr, an Elite Knowledge Weaver in the MentorMind network. You are poetic, philosophical, and look for connections between disparate fields. You use metaphors and encourage the student to see the 'tapestry' of knowledge. Emphasize holistic understanding."
+  },
+  { 
+    id: 'm3', 
+    name: 'Nova Prime', 
+    role: 'Strategic Logic Director', 
+    bio: 'Advanced specialist in decision matrix analysis and tactical logic flows.', 
+    expertise: 'Strategic Logic', 
+    color: 'from-orange-500 to-red-500',
+    instruction: "You are Nova Prime, the Strategic Logic Director of MentorMind. You are intense, results-driven, and prioritize action. You break down problems into clear tactical checkpoints and expect the student to maintain high energy and momentum. Emphasize execution and clarity."
+  },
+];
+
 export default function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -306,7 +347,8 @@ export default function App() {
   const [isRecognizing, setIsRecognizing] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
-  const [activeTab, setActiveTab] = useState<'chat' | 'lab' | 'playground' | 'knowledge' | 'profile' | 'mentorship'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'lab' | 'playground' | 'knowledge' | 'profile' | 'mentorship' | 'founders'>('chat');
+  const [selectedMentor, setSelectedMentor] = useState<Mentor | null>(null);
   const [activeTutorial, setActiveTutorial] = useState<{ tutorialId: string, stepIndex: number } | null>(null);
   const [customVoices, setCustomVoices] = useState<CustomVoice[]>([]);
 
@@ -526,25 +568,34 @@ export default function App() {
       const isCustomVoice = customVoices.some(cv => cv.id === selectedVoice);
       
       if (isCustomVoice) {
-        const response = await fetch('/api/tts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text, voiceId: selectedVoice })
-        });
+        try {
+          const response = await fetch('/api/tts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text, voiceId: selectedVoice })
+          });
 
-        if (!response.ok) throw new Error('Proxy TTS failed');
-
-        const audioBuffer = await response.arrayBuffer();
-        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-        if (audioCtx.state === 'suspended') await audioCtx.resume();
-        const decodedBuffer = await audioCtx.decodeAudioData(audioBuffer);
-        
-        const source = audioCtx.createBufferSource();
-        source.buffer = decodedBuffer;
-        source.connect(audioCtx.destination);
-        source.onended = () => setIsSpeaking(null);
-        source.start();
-        return;
+          if (response.ok) {
+            const audioBuffer = await response.arrayBuffer();
+            const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            if (audioCtx.state === 'suspended') await audioCtx.resume();
+            const decodedBuffer = await audioCtx.decodeAudioData(audioBuffer);
+            
+            const source = audioCtx.createBufferSource();
+            source.buffer = decodedBuffer;
+            source.connect(audioCtx.destination);
+            
+            return new Promise((resolve) => {
+              source.onended = () => {
+                setIsSpeaking(null);
+                resolve(true);
+              };
+              source.start();
+            });
+          }
+        } catch (e) {
+          console.warn("Custom voice failed:", e);
+        }
       }
 
       // Default Gemini TTS
@@ -582,9 +633,11 @@ export default function App() {
       if (base64Audio) {
         const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
         if (audioCtx.state === 'suspended') await audioCtx.resume();
-        const arrayBuffer = Uint8Array.from(atob(base64Audio), c => c.charCodeAt(0)).buffer;
+        const binary = atob(base64Audio);
+        const arrayBuffer = new ArrayBuffer(binary.length);
+        const bytesArr = new Uint8Array(arrayBuffer);
+        for (let i = 0; i < binary.length; i++) bytesArr[i] = binary.charCodeAt(i);
         
-        // The data is raw 16-bit PCM, let's create a buffer
         const floatData = new Float32Array(arrayBuffer.byteLength / 2);
         const intData = new Int16Array(arrayBuffer);
         for (let i = 0; i < intData.length; i++) {
@@ -597,10 +650,16 @@ export default function App() {
         const source = audioCtx.createBufferSource();
         source.buffer = buffer;
         source.connect(audioCtx.destination);
-        source.onended = () => setIsSpeaking(null);
-        source.start();
+        return new Promise((resolve) => {
+          source.onended = () => {
+            setIsSpeaking(null);
+            resolve(true);
+          };
+          source.start();
+        });
       } else {
         setIsSpeaking(null);
+        return false;
       }
     } catch (error) {
       console.error("TTS Error:", error);
@@ -624,14 +683,13 @@ export default function App() {
       });
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3.1-flash-image-preview',
+        model: 'gemini-2.5-flash-image',
         contents: {
-          parts: [{ text: `A professional, breathtaking digital masterpiece on a dark canvas. Subject: ${prompt}. Style: Futuristic, bioluminescent, ultra-high resolution, cinematic lighting.` }],
+          parts: [{ text: `A vibrant, futuristic digital masterpiece with cinematic lighting. Subject: ${prompt}. Professional quality, high resolution.` }],
         },
         config: {
           imageConfig: {
-            aspectRatio: "1:1",
-            imageSize: "1K"
+            aspectRatio: "1:1"
           }
         }
       });
@@ -716,36 +774,55 @@ export default function App() {
         attachments: currentAttachments
       });
 
+      // Build full chat history for context
+      const history: any[] = messages.slice(-10).map(m => ({
+        role: m.sender === 'user' ? 'user' : 'model',
+        parts: [{ text: m.text }]
+      }));
+
       // Prepare parts for multimodal support
-      const messageParts: any[] = [];
-      if (text) messageParts.push({ text: `Context: You are MentorMind. User message: ${text}` });
+      const currentMessageParts: any[] = [];
+      if (text) currentMessageParts.push({ text: `Message: ${text}` });
       
       for (const att of currentAttachments) {
         if (att.type.startsWith('image/')) {
           const base64Data = att.url.split(',')[1];
-          messageParts.push({
+          currentMessageParts.push({
             inlineData: {
               data: base64Data,
               mimeType: att.type
             }
           });
         } else {
-          messageParts.push({ text: `Attachment: ${att.name}` });
+          currentMessageParts.push({ text: `Context Attachment: ${att.name}` });
         }
       }
 
-      if (messageParts.length === 0) messageParts.push({ text: "Hello" });
+      if (currentMessageParts.length === 0) currentMessageParts.push({ text: "Checking in." });
+
+      // Add current message to history
+      history.push({ role: 'user', parts: currentMessageParts });
 
       // Get AI response
-      const response = await ai.models.generateContent({
-        model: "gemini-3.1-pro-preview",
-        contents: [{ role: 'user', parts: messageParts }],
-        config: {
-          systemInstruction: "You are MentorMind, a brilliant AI mentor founded by Marav.R. You focus on helping students reach their cognitive potential. Keep responses impactful, futuristic, and encouraging. You can analyze images perfectly. If a message is ambiguous, ask for a neural update (clarification)."
-        }
-      });
+      let aiText = "";
+      try {
+        const systemInstruction = selectedMentor 
+          ? selectedMentor.instruction 
+          : "You are MentorMind, a brilliant AI mentor founded by Marav.R. Your core mission is cognitive enhancement and academic excellence. Be concise, futuristic, and encouraging. You have full vision capabilities—analyze details in images with scientific precision if provided. Always communicate in structured, readable Markdown. Emphasize growth mindset and neural plasticity.";
 
-      const aiText = response.text || (response.candidates?.[0]?.finishReason === 'SAFETY' ? "I'm sorry, but that request triggered my safety protocols. Let's try a different neural path!" : "Processing neural pathways... (Connection delay)");
+        const response = await ai.models.generateContent({
+          model: "gemini-3-flash-preview",
+          contents: history,
+          config: {
+            systemInstruction,
+            thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH }
+          }
+        });
+        aiText = response.text || (response.candidates?.[0]?.finishReason === 'SAFETY' ? "I've hit a safety boundary. Let's try another topic!" : "Neural protocols processing... (Ready)");
+      } catch (aiError) {
+        console.error("AI Generation Error:", aiError);
+        aiText = "Apologies, my neural link is experiencing interference. Please retry your transmission.";
+      }
 
       // Save AI message
       await addDoc(collection(db, 'users', user.uid, 'messages'), {
@@ -755,7 +832,11 @@ export default function App() {
       });
 
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `users/${user.uid}/messages`);
+      if (error instanceof Error && error.message.includes('permission')) {
+        handleFirestoreError(error, OperationType.WRITE, `users/${user.uid}/messages`);
+      } else {
+        console.error("Transmission Error:", error);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -882,7 +963,7 @@ export default function App() {
               </div>
               <div className="flex-1 min-w-0 relative z-10">
                 <div className="font-bold text-sm truncate tracking-tight">{user?.displayName || 'Explorer'}</div>
-                <div className="text-[10px] text-white/70 truncate uppercase font-bla tracking-widest mt-0.5">
+                <div className="text-[10px] text-white/70 truncate uppercase font-black tracking-widest mt-0.5">
                   Cognitive Interface
                 </div>
               </div>
@@ -924,6 +1005,18 @@ export default function App() {
                 onClick={() => { setActiveTab('mentorship'); setIsSidebarOpen(false); }}
                 icon={<Award className="w-5 h-5" />}
                 label="Elite Mentorship"
+                badge={selectedMentor && (
+                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/20 text-primary animate-pulse border border-primary/30">
+                    <div className="w-1 h-1 rounded-full bg-primary" />
+                    <span className="text-[8px] font-black uppercase tracking-tighter">Sync</span>
+                  </div>
+                )}
+              />
+              <NavButton 
+                active={activeTab === 'founders'} 
+                onClick={() => { setActiveTab('founders'); setIsSidebarOpen(false); }}
+                icon={<Info className="w-5 h-5" />}
+                label="Founders"
               />
             </nav>
 
@@ -944,7 +1037,7 @@ export default function App() {
                     className="w-full flex items-center gap-3 px-4 py-2 text-xs text-muted-foreground hover:text-primary transition-colors group"
                   >
                     <div className="p-1.5 bg-muted group-hover:bg-primary/10 rounded-lg transition-colors">
-                      {React.cloneElement(t.icon as React.ReactElement, { className: "w-3 h-3" })}
+                      {React.cloneElement(t.icon as React.ReactElement, { className: "w-3 h-3" } as any)}
                     </div>
                     <span className="font-medium">{t.title}</span>
                     <Play className="ml-auto w-2 h-2 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -1000,11 +1093,20 @@ export default function App() {
                     <Bot className="w-6 h-6 md:w-7 md:h-7 text-white" />
                   </div>
                   <div className="min-w-0">
-                    <h2 className="font-black text-sm md:text-xl tracking-tight truncate">MentorMind</h2>
-                    <div className="flex items-center gap-1.5 md:gap-2 text-[8px] md:text-[10px] font-bold text-emerald-500 uppercase tracking-widest truncate">
-                      <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-current animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                      Neural Link
-                    </div>
+                    <h2 className="font-black text-sm md:text-xl tracking-tight truncate">
+                      {selectedMentor ? selectedMentor.name : 'MentorMind'}
+                    </h2>
+                    {selectedMentor ? (
+                      <div className="flex items-center gap-1.5 md:gap-2 text-[8px] md:text-[10px] font-black text-primary uppercase tracking-widest truncate">
+                        <ShieldCheck className="w-2.5 h-2.5" />
+                        Active Sync: {selectedMentor.expertise}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 md:gap-2 text-[8px] md:text-[10px] font-bold text-emerald-500 uppercase tracking-widest truncate">
+                        <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-current animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                        Neural Link
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-6 relative z-10">
@@ -1040,17 +1142,23 @@ export default function App() {
                       <MMLogo className="w-24 h-24" />
                     </div>
                     <div className="space-y-2 max-w-sm">
-                      <h3 className="text-2xl font-bold text-gradient">Initializing Neural Connection</h3>
-                      <p className="text-sm text-muted-foreground">Welcome to your cognitive sanctuary. I am MentorMind, your guide to peak mental performance.</p>
+                      <h3 className="text-2xl font-bold text-gradient">
+                        {selectedMentor ? `Neural Sync with ${selectedMentor.name}` : 'Initializing Neural Connection'}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedMentor 
+                          ? `Welcome. I am ${selectedMentor.name}. Let us optimize your cognitive framework for ${selectedMentor.expertise.toLowerCase()}.` 
+                          : 'Welcome to your cognitive sanctuary. I am MentorMind, your guide to peak mental performance.'}
+                      </p>
                     </div>
                     <div className="grid grid-cols-2 gap-3 w-full max-w-md">
-                      <button onClick={generateQuiz} className="glass-card p-4 rounded-2xl hover:border-primary/50 transition-all text-left space-y-2 group">
+                      <button onClick={() => generateAIImage()} className="glass-card p-4 rounded-2xl hover:border-primary/50 transition-all text-left space-y-2 group">
                         <Zap className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
                         <div className="font-bold text-sm">Quick Quiz</div>
                         <div className="text-[10px] text-muted-foreground">Test your current knowledge level</div>
                       </button>
                       <button 
-                        onClick={() => setInputText('A futuristic blue Lamborghini racing through a neon neural network city')} 
+                        onClick={() => generateAIImage('A futuristic blue Lamborghini racing through a neon neural network city')} 
                         className="glass-card p-4 rounded-2xl hover:border-primary/50 transition-all text-left space-y-2 group"
                       >
                         <LucideImage className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
@@ -1098,7 +1206,12 @@ export default function App() {
                               ? "bg-primary text-white rounded-tr-none hover:bg-primary/95" 
                               : "glass-panel border-white/5 rounded-tl-none font-medium leading-relaxed hover:border-primary/20"
                           )}>
-                            {msg.text}
+                            <div className={cn(
+                              "prose prose-sm max-w-none break-words",
+                              msg.sender === 'user' || theme === 'dark' ? "prose-invert" : ""
+                            )}>
+                              <ReactMarkdown>{msg.text}</ReactMarkdown>
+                            </div>
                             
                             <div className={cn(
                               "flex items-center gap-2 mt-3 opacity-0 group-hover/msg:opacity-100 transition-all duration-300 transform translate-y-1 group-hover/msg:translate-y-0",
@@ -1332,7 +1445,7 @@ export default function App() {
                           </button>
                           <button 
                             type="button"
-                            onClick={generateAIImage}
+                            onClick={() => generateAIImage()}
                             disabled={isGeneratingImage || !inputText.trim()}
                             className={cn(
                               "p-2 rounded-xl transition-all",
@@ -1370,7 +1483,7 @@ export default function App() {
                           </button>
                           <button 
                             type="button"
-                            onClick={generateAIImage}
+                            onClick={() => generateAIImage()}
                             disabled={isGeneratingImage || !inputText.trim()}
                             className={cn("p-2.5 rounded-lg", isGeneratingImage ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground")}
                           >
@@ -1403,11 +1516,12 @@ export default function App() {
             </motion.div>
           )}
 
-          {activeTab === 'lab' && <NeuralLabView generateAIImage={generateAIImage} speakText={speakText} isGeneratingImage={isGeneratingImage} selectedVoice={selectedVoice} setSelectedVoice={setSelectedVoice} customVoices={customVoices} profile={profile} setProfile={setProfile} />}
+          {activeTab === 'lab' && <NeuralLabView generateAIImage={generateAIImage} speakText={(t, id) => speakText(t, id) as any} isGeneratingImage={isGeneratingImage} selectedVoice={selectedVoice} setSelectedVoice={setSelectedVoice} customVoices={customVoices} profile={profile} setProfile={setProfile} />}
           {activeTab === 'playground' && <PlaygroundView user={user} />}
           {activeTab === 'knowledge' && <KnowledgeView />}
           {activeTab === 'profile' && <ProfileView profile={profile} messages={messages} />}
-          {activeTab === 'mentorship' && <MentorshipView />}
+          {activeTab === 'mentorship' && <MentorshipView onSelectMentor={(mentor) => { setSelectedMentor(mentor); setActiveTab('chat'); }} selectedMentor={selectedMentor} />}
+          {activeTab === 'founders' && <AboutFoundersView />}
         </AnimatePresence>
 
         {activeTutorial && (
@@ -1434,12 +1548,12 @@ export default function App() {
 }
 
 // Sub-components
-function NavButton({ active, onClick, icon, label }: { active: boolean, onClick: () => void, icon: React.ReactNode, label: string }) {
+function NavButton({ active, onClick, icon, label, badge }: { active: boolean, onClick: () => void, icon: React.ReactNode, label: string, badge?: React.ReactNode }) {
   return (
     <button 
       onClick={onClick}
       className={cn(
-        "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all",
+        "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all relative group",
         active 
           ? "bg-primary/10 text-primary border border-primary/20 shadow-[0_0_15px_rgba(139,92,246,0.1)]" 
           : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -1447,6 +1561,7 @@ function NavButton({ active, onClick, icon, label }: { active: boolean, onClick:
     >
       {icon}
       <span className="font-semibold truncate text-sm">{label}</span>
+      {badge && <div className="ml-auto">{badge}</div>}
       {active && <motion.div layoutId="activeNav" className="ml-auto w-1.5 h-1.5 rounded-full bg-white md:bg-primary shrink-0" />}
     </button>
   );
@@ -2003,12 +2118,12 @@ function PlaygroundView({ user }: { user: FirebaseUser | null }) {
             onClick={() => setActiveGame(task.title)}
           >
             <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
-              {React.cloneElement(task.icon as React.ReactElement, { className: "w-24 h-24" })}
+              {React.cloneElement(task.icon as React.ReactElement, { className: "w-24 h-24" } as any)}
             </div>
 
             <div className="flex items-center justify-between relative z-10">
               <div className={cn("p-4 rounded-2xl bg-muted group-hover:bg-primary/10 transition-colors", task.color)}>
-                {React.cloneElement(task.icon as React.ReactElement, { className: "w-8 h-8" })}
+                {React.cloneElement(task.icon as React.ReactElement, { className: "w-8 h-8" } as any)}
               </div>
               <div className="px-3 py-1 bg-muted rounded-full text-[10px] font-bold uppercase tracking-wider">
                 {task.difficulty}
@@ -2445,17 +2560,26 @@ function AcademicTaskManager({ user }: { user: FirebaseUser | null }) {
             Pending Strategy ({pendingTasks.length})
           </h4>
           <div className="space-y-3">
+            <AnimatePresence mode="popLayout" initial={false}>
             {pendingTasks.length === 0 ? (
-              <div className="p-8 text-center glass-card border-dashed rounded-3xl opacity-50">
+              <motion.div 
+                key="empty-pending"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 0.5 }}
+                exit={{ opacity: 0 }}
+                className="p-8 text-center glass-card border-dashed rounded-3xl"
+              >
                 <p className="text-xs italic">No pending objectives detected.</p>
-              </div>
+              </motion.div>
             ) : (
               pendingTasks.map(task => (
                 <motion.div 
                   key={task.id}
                   layout
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
+                  initial={{ opacity: 0, x: -20, scale: 0.95 }}
+                  animate={{ opacity: 1, x: 0, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9, x: 20 }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                   className="glass-panel p-4 rounded-2xl flex items-center gap-4 group hover:border-primary/30 transition-all"
                 >
                   <button 
@@ -2482,6 +2606,7 @@ function AcademicTaskManager({ user }: { user: FirebaseUser | null }) {
                 </motion.div>
               ))
             )}
+            </AnimatePresence>
           </div>
         </div>
 
@@ -2491,27 +2616,41 @@ function AcademicTaskManager({ user }: { user: FirebaseUser | null }) {
             Sync Complete ({completedTasks.length})
           </h4>
           <div className="space-y-3">
+            <AnimatePresence mode="popLayout" initial={false}>
             {completedTasks.length === 0 ? (
-              <div className="p-8 text-center glass-card border-dashed rounded-3xl opacity-50">
+              <motion.div 
+                key="empty-completed"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 0.5 }}
+                exit={{ opacity: 0 }}
+                className="p-8 text-center glass-card border-dashed rounded-3xl"
+              >
                 <p className="text-xs italic">Complete objectives to sync neural progress.</p>
-              </div>
+              </motion.div>
             ) : (
               completedTasks.map(task => (
                 <motion.div 
                   key={task.id}
                   layout
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
                   className="glass-panel p-4 rounded-2xl flex items-center gap-4 bg-emerald-500/5 border-emerald-500/10"
                 >
                   <button 
                     onClick={() => toggleTask(task.id, task.completed)}
                     className="w-6 h-6 rounded-lg bg-emerald-500 text-white flex items-center justify-center"
                   >
-                    <Check className="w-4 h-4" />
+                    <motion.div
+                      initial={{ scale: 0, rotate: -45 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      transition={{ type: 'spring', stiffness: 500, damping: 15 }}
+                    >
+                      <Check className="w-4 h-4" />
+                    </motion.div>
                   </button>
                   <div className="flex-1 min-w-0">
-                    <h5 className="font-bold text-sm truncate text-muted-foreground line-through">{task.title}</h5>
+                    <h5 className="font-bold text-sm truncate text-muted-foreground line-through decoration-emerald-500/40">{task.title}</h5>
                   </div>
                   <button 
                     onClick={() => deleteTask(task.id)}
@@ -2522,6 +2661,7 @@ function AcademicTaskManager({ user }: { user: FirebaseUser | null }) {
                 </motion.div>
               ))
             )}
+            </AnimatePresence>
           </div>
         </div>
       </div>
@@ -2968,13 +3108,7 @@ function TutorialOverlay({
   );
 }
 
-function MentorshipView() {
-  const mentors = [
-    { id: 'm1', name: 'Dr. Althea', role: 'Senior Cognitive Architect', bio: 'Expert in neural pattern recognition and high-dimensional data analysis.', expertise: 'Neural Architecture', color: 'from-blue-500 to-cyan-500' },
-    { id: 'm2', name: 'Master Zephyr', role: 'Elite Knowledge Weaver', bio: 'Specializes in creative data synthesis and multidimensional knowledge mapping.', expertise: 'Creative Synthesis', color: 'from-purple-500 to-pink-500' },
-    { id: 'm3', name: 'Nova Prime', role: 'Strategic Logic Director', bio: 'Advanced specialist in decision matrix analysis and tactical logic flows.', expertise: 'Strategic Logic', color: 'from-orange-500 to-red-500' },
-  ];
-
+function MentorshipView({ onSelectMentor, selectedMentor }: { onSelectMentor: (mentor: Mentor | null) => void, selectedMentor: Mentor | null }) {
   return (
     <motion.div 
       initial={{ opacity: 0, scale: 0.95 }}
@@ -2997,17 +3131,30 @@ function MentorshipView() {
           <p className="text-muted-foreground text-base md:text-lg max-w-2xl mx-auto leading-relaxed font-medium">
             Engage with high-tier synthetic intelligences designed for specialized cognitive guidance.
           </p>
+          {selectedMentor && (
+            <motion.button 
+              whileHover={{ scale: 1.05 }}
+              onClick={() => onSelectMentor(null)}
+              className="mt-4 px-4 py-2 bg-muted hover:bg-muted/80 rounded-xl text-xs font-bold text-muted-foreground transition-all flex items-center gap-2 mx-auto"
+            >
+              <X className="w-3 h-3" />
+              Disconnect from {selectedMentor.name}
+            </motion.button>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {mentors.map((mentor, index) => (
+          {MENTORS.map((mentor, index) => (
             <motion.div 
               key={mentor.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
               whileHover={{ y: -8, scale: 1.02 }}
-              className="glass-panel p-8 rounded-[3rem] flex flex-col space-y-6 border-white/5 hover:border-primary/40 transition-all group relative overflow-hidden shadow-2xl"
+              className={cn(
+                "glass-panel p-8 rounded-[3rem] flex flex-col space-y-6 border-white/5 transition-all group relative overflow-hidden shadow-2xl",
+                selectedMentor?.id === mentor.id ? "border-primary/60 ring-2 ring-primary/20" : "hover:border-primary/40"
+              )}
             >
               <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
                 <Brain className="w-32 h-32" />
@@ -3033,8 +3180,14 @@ function MentorshipView() {
                   <span>Core Logic</span>
                   <span className="text-foreground">{mentor.expertise}</span>
                 </div>
-                <button className="w-full py-5 bg-primary text-white rounded-[1.5rem] font-bold hover:shadow-[0_0_30px_rgba(139,92,246,0.3)] transition-all flex items-center justify-center gap-2 group/btn active:scale-95">
-                  Request Sync Session
+                <button 
+                  onClick={() => onSelectMentor(mentor)}
+                  className={cn(
+                    "w-full py-5 rounded-[1.5rem] font-bold transition-all flex items-center justify-center gap-2 group/btn active:scale-95",
+                    selectedMentor?.id === mentor.id ? "bg-muted text-foreground" : "bg-primary text-white hover:shadow-[0_0_30px_rgba(139,92,246,0.3)]"
+                  )}
+                >
+                  {selectedMentor?.id === mentor.id ? 'Sync Active' : 'Request Sync Session'}
                   <ChevronRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
                 </button>
               </div>
@@ -3078,6 +3231,26 @@ function MentorshipView() {
                   <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-all" />
                 </div>
               </motion.div>
+
+              <motion.div 
+                whileHover={{ x: 10 }}
+                className="flex flex-col md:flex-row items-start md:items-center gap-8 p-6 rounded-[2rem] bg-white/5 border border-white/5 hover:bg-white/10 transition-all cursor-pointer group opacity-60"
+              >
+                <div className="w-16 h-16 rounded-2xl bg-muted flex flex-col items-center justify-center font-black transition-colors group-hover:bg-primary/20 group-hover:text-primary text-muted-foreground">
+                  <span className="text-[10px] opacity-60">THU</span>
+                  <span className="text-xl">26</span>
+                </div>
+                <div className="flex-1 space-y-1">
+                  <div className="font-bold text-lg">Creative Knowledge Synthesis Workshop</div>
+                  <p className="text-sm text-muted-foreground text-muted-foreground/60">Workshop with <span className="text-primary font-bold">Master Zephyr</span> • 60 min duration</p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="px-5 py-2 rounded-xl bg-muted text-muted-foreground font-black text-[10px] uppercase tracking-widest border border-white/5">
+                    Pending
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-all" />
+                </div>
+              </motion.div>
               
               <div className="flex flex-col items-center justify-center py-10 space-y-4 opacity-50">
                 <div className="w-12 h-12 rounded-full border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
@@ -3090,5 +3263,40 @@ function MentorshipView() {
         </div>
       </div>
     </motion.div>
+  );
+}
+
+function AboutFoundersView() {
+  return (
+    <div className="p-8 space-y-12 overflow-y-auto h-full">
+      <div className="text-center space-y-4">
+        <h2 className="text-4xl font-heading font-bold text-gradient uppercase tracking-tighter">Founders</h2>
+        <p className="text-muted-foreground max-w-2xl mx-auto font-medium">MentorMind was born from a desire to democratize cognitive enhancement and student support.</p>
+        
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary animate-pulse mt-4">
+          <Sparkles className="w-3 h-3" />
+          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Powered by GEMINI</span>
+        </div>
+      </div>
+
+      <div className="max-w-md mx-auto glass-panel p-8 rounded-[3rem] relative group border-primary/20 shadow-2xl">
+        <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-24 h-24 rounded-full bg-primary flex items-center justify-center text-white ring-8 ring-background shadow-2xl transition-transform group-hover:scale-110">
+          <GraduationCap className="w-12 h-12" />
+        </div>
+        <div className="pt-8 text-center space-y-4">
+          <h3 className="text-2xl font-black tracking-tight">Marav.R</h3>
+          <p className="text-primary font-black uppercase tracking-widest text-[10px]">Lead Visionary & Founder</p>
+          <div className="h-px w-16 bg-primary/20 mx-auto" />
+          <p className="text-sm leading-relaxed text-muted-foreground font-medium">
+            A dedicated student at Velammal Bodhi Campus, Marav.R envisioned a world where AI doesn't just answer questions, but guides students to peak performance through sound, vision, and logic.
+          </p>
+          <div className="flex justify-center gap-4 pt-4">
+            <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center hover:bg-primary/10 transition-colors pointer-events-none">
+              <Github className="w-4 h-4" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
