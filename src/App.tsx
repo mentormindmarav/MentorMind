@@ -43,6 +43,7 @@ import {
   Fingerprint,
   Upload,
   ShieldCheck,
+  Trash2,
   Calendar,
   Video,
   Globe,
@@ -68,6 +69,8 @@ import {
   setDoc, 
   updateDoc,
   deleteDoc,
+  getDocs,
+  writeBatch,
   where,
   limit
 } from 'firebase/firestore';
@@ -1519,7 +1522,7 @@ export default function App() {
           {activeTab === 'lab' && <NeuralLabView generateAIImage={generateAIImage} speakText={(t, id) => speakText(t, id) as any} isGeneratingImage={isGeneratingImage} selectedVoice={selectedVoice} setSelectedVoice={setSelectedVoice} customVoices={customVoices} profile={profile} setProfile={setProfile} />}
           {activeTab === 'playground' && <PlaygroundView user={user} />}
           {activeTab === 'knowledge' && <KnowledgeView />}
-          {activeTab === 'profile' && <ProfileView profile={profile} messages={messages} />}
+          {activeTab === 'profile' && <ProfileView profile={profile} messages={messages} user={user} />}
           {activeTab === 'mentorship' && <MentorshipView onSelectMentor={(mentor) => { setSelectedMentor(mentor); setActiveTab('chat'); }} selectedMentor={selectedMentor} />}
           {activeTab === 'founders' && <AboutFoundersView />}
         </AnimatePresence>
@@ -2970,7 +2973,47 @@ function KnowledgeView() {
   );
 }
 
-function ProfileView({ profile, messages }: { profile: UserProfile | null, messages: Message[] }) {
+function ProfileView({ profile, messages, user }: { profile: UserProfile | null, messages: Message[], user: FirebaseUser | null }) {
+  const [isResetting, setIsResetting] = useState(false);
+
+  const resetProgress = async () => {
+    if (!user) return;
+    if (!window.confirm("CRITICAL ALERT: This will permanently purge your neural link history and academic progress. This operation is irreversible. Proceed with protocol wipe?")) return;
+
+    setIsResetting(true);
+    try {
+      // Create a batch for efficiency
+      const batch = writeBatch(db);
+
+      // 1. Fetch and delete messages
+      const messagesSnapshot = await getDocs(collection(db, 'users', user.uid, 'messages'));
+      messagesSnapshot.forEach((doc) => {
+        batch.delete(doc.ref);
+      });
+
+      // 2. Fetch and delete tasks
+      const tasksSnapshot = await getDocs(collection(db, 'users', user.uid, 'tasks'));
+      tasksSnapshot.forEach((doc) => {
+        batch.delete(doc.ref);
+      });
+
+      // 3. Reset profile metrics (optional, if you track extra stats there)
+      // For now we just reset history and tasks
+
+      await batch.commit();
+      
+      // Also reset tutorial state if it was stored in local profile
+      // await updateDoc(doc(db, 'users', user.uid), { tutorialCompleted: false });
+
+      alert("Neural parameters reset to default industrial state.");
+    } catch (error) {
+      console.error("Reset Error:", error);
+      alert("Neural wipe failed. System interference detected.");
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
@@ -2985,7 +3028,7 @@ function ProfileView({ profile, messages }: { profile: UserProfile | null, messa
         <div className="flex flex-col md:flex-row items-center gap-6 md:gap-8 relative z-10">
           <div className="relative">
             <div className="w-24 h-24 md:w-32 md:h-32 rounded-2xl md:rounded-3xl overflow-hidden border-4 border-primary/20">
-              <img src={profile?.photoURL || "https://picsum.photos/seed/user/200"} alt="Profile" className="w-full h-full object-cover" />
+              <img src={profile?.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.uid}`} alt="Profile" className="w-full h-full object-cover" />
             </div>
             <div className="absolute -bottom-2 -right-2 bg-primary text-white p-1.5 md:p-2 rounded-lg md:rounded-xl shadow-lg">
               <Zap className="w-4 h-4 md:w-5 md:h-5" />
@@ -2993,19 +3036,56 @@ function ProfileView({ profile, messages }: { profile: UserProfile | null, messa
           </div>
           
           <div className="text-center md:text-left space-y-1 md:space-y-2">
-            <h2 className="text-2xl md:text-3xl font-heading font-bold">{profile?.displayName}</h2>
-            <p className="text-xs md:text-sm text-muted-foreground truncate max-w-[200px] md:max-w-none">{profile?.email}</p>
+            <h2 className="text-2xl md:text-3xl font-heading font-bold uppercase tracking-tight">{profile?.displayName || 'Explorer'}</h2>
+            <p className="text-xs md:text-sm text-muted-foreground font-mono opacity-60 truncate max-w-[200px] md:max-w-none">{profile?.email}</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12">
-          <div className="glass-card p-6 rounded-3xl text-center space-y-2">
-            <span className="text-muted-foreground text-xs uppercase tracking-wider">Neural Sync</span>
-            <div className="text-3xl font-bold text-primary">98.2%</div>
+          <div className="glass-card p-6 rounded-3xl text-center space-y-2 group hover:border-primary/40 transition-all">
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <Cpu className="w-3 h-3 text-primary" />
+              <span className="text-muted-foreground text-[10px] uppercase font-black tracking-widest">Neural Sync</span>
+            </div>
+            <div className="text-3xl font-black text-primary font-heading">98.2%</div>
+            <div className="text-[9px] text-muted-foreground/60 uppercase font-bold">Optimization Quotient</div>
           </div>
-          <div className="glass-card p-6 rounded-3xl text-center space-y-2">
-            <span className="text-muted-foreground text-xs uppercase tracking-wider">Sync Operations</span>
-            <div className="text-3xl font-bold text-primary">{messages.length}</div>
+          <div className="glass-card p-6 rounded-3xl text-center space-y-2 group hover:border-primary/40 transition-all">
+             <div className="flex items-center justify-center gap-2 mb-1">
+              <MessageSquare className="w-3 h-3 text-primary" />
+              <span className="text-muted-foreground text-[10px] uppercase font-black tracking-widest">Sync Ops</span>
+            </div>
+            <div className="text-3xl font-black text-primary font-heading">{messages.length}</div>
+            <div className="text-[9px] text-muted-foreground/60 uppercase font-bold">Stored Transmissions</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <h3 className="text-xs font-black uppercase tracking-[0.3em] text-muted-foreground px-4">Core Management</h3>
+        <div className="space-y-4">
+          <div className="glass-panel p-8 rounded-[2.5rem] flex flex-col md:flex-row items-center justify-between gap-6 border-red-500/10 hover:border-red-500/30 transition-all group">
+            <div className="space-y-2 text-center md:text-left">
+              <h4 className="font-bold text-lg text-foreground flex items-center justify-center md:justify-start gap-2">
+                <Trash2 className="w-5 h-5 text-red-500" />
+                Factory Reset Neural Hub
+              </h4>
+              <p className="text-sm text-muted-foreground leading-relaxed max-w-sm">
+                Wipes all stored messages, academic objectives, and progress data from the MentorMind cloud network.
+              </p>
+            </div>
+            <button 
+              onClick={resetProgress}
+              disabled={isResetting}
+              className={cn(
+                "px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95",
+                isResetting 
+                  ? "bg-muted text-muted-foreground cursor-not-allowed" 
+                  : "bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/20"
+              )}
+            >
+              {isResetting ? 'Purging Protocols...' : 'Initialize Wipe'}
+            </button>
           </div>
         </div>
       </div>
