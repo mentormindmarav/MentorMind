@@ -47,7 +47,10 @@ import {
   Calendar,
   Video,
   Globe,
-  X
+  X,
+  BookOpen,
+  Home,
+  Mail
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth, db, googleProvider } from './lib/firebase';
@@ -184,8 +187,10 @@ const ScanningEffect = () => (
 
 const MMLogo = ({ className }: { className?: string }) => (
   <div className={cn("relative flex items-center justify-center", className)}>
-    <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full glow-effect" />
-    <Brain className="w-8 h-8 text-primary relative z-10" />
+    <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
+    <div className="w-8 h-8 md:w-10 md:h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/30 relative z-10">
+      <Play className="w-5 h-5 md:w-6 md:h-6 text-white fill-current translate-x-0.5" />
+    </div>
   </div>
 );
 
@@ -847,69 +852,7 @@ export default function App() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden font-heading">
-        <div className="atmosphere" />
-        <div className="grid-overlay" />
-        
-        {/* Decorative elements inspired by Theme.tsx */}
-        <div className="absolute top-0 left-0 w-full h-[60vh] bg-gradient-to-br from-[#FF8A65]/10 via-[#9C27B0]/10 to-[#2196F3]/10 -skew-y-6 origin-top-left -z-10" />
-
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md relative z-10"
-        >
-          <div className="glass-panel p-10 rounded-[2.5rem] text-center space-y-8 relative overflow-hidden border-white/20 shadow-2xl">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#FF8A65] via-[#9C27B0] to-[#2196F3]" />
-            
-            <button 
-              onClick={toggleTheme}
-              className="absolute top-6 right-6 p-2 hover:bg-muted rounded-full transition-all hover:rotate-12"
-              title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-            >
-              {theme === 'light' ? <Moon className="w-5 h-5 text-muted-foreground" /> : <Sun className="w-5 h-5 text-muted-foreground" />}
-            </button>
-
-            <MMLogo className="mx-auto scale-125 mb-4" />
-            
-            <div className="space-y-3">
-              <h1 className="text-5xl font-bold tracking-tight text-gradient">MentorMind</h1>
-              <p className="text-muted-foreground font-medium text-lg">Present your mind in the most beautiful way</p>
-            </div>
-            
-            <div className="space-y-4 pt-4">
-              <button 
-                onClick={handleLogin}
-                className="w-full py-4 bg-primary hover:brightness-110 text-white rounded-2xl font-bold transition-all flex items-center justify-center gap-4 shadow-xl shadow-primary/20 group"
-              >
-                <div className="bg-white p-1 rounded-lg group-hover:scale-110 transition-transform">
-                  <svg className="w-5 h-5" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                  </svg>
-                </div>
-                Authorize Your Mind
-              </button>
-              
-              {loginError && (
-                <motion.div 
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-xs font-bold"
-                >
-                  {loginError}
-                </motion.div>
-              )}
-            </div>
-            
-            <p className="text-xs text-muted-foreground/60 leading-relaxed max-w-[280px] mx-auto">
-              By connecting your mind, you agree to our <span className="text-primary font-bold cursor-pointer">Terms of Service</span> and <span className="text-primary font-bold cursor-pointer">Privacy Protocol</span>.
-            </p>
-          </div>
-        </motion.div>
-      </div>
+      <LandingView onLogin={handleLogin} theme={theme} toggleTheme={toggleTheme} />
     );
   }
 
@@ -2970,6 +2913,282 @@ function KnowledgeView() {
         ))}
       </div>
     </motion.div>
+  );
+}
+
+function LandingView({ onLogin, theme, toggleTheme }: { onLogin: () => void, theme: string, toggleTheme: () => void }) {
+  return (
+    <div className="min-h-screen bg-white text-[#1A1A1A] font-sans selection:bg-primary/20">
+      {/* Navigation */}
+      <nav className="fixed top-0 left-0 w-full z-[100] px-6 py-6">
+        <div className="max-w-7xl mx-auto flex items-center justify-between glass-panel px-6 py-3 rounded-full border-white/40 shadow-xl shadow-black/5 bg-white/70 backdrop-blur-md">
+          <div className="flex items-center gap-2 group cursor-pointer">
+            <div className="w-10 h-10 bg-[#0F172A] rounded-xl flex items-center justify-center shadow-lg group-hover:rotate-12 transition-all">
+              <Play className="w-6 h-6 text-[#00AEEF] fill-current translate-x-0.5" />
+            </div>
+            <span className="text-2xl font-black tracking-tighter text-[#0F172A]">Vidnia.co</span>
+          </div>
+          
+          <div className="hidden md:flex items-center gap-1">
+            <a href="#home" className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#00AEEF] text-white text-sm font-bold transition-all shadow-lg shadow-[#00AEEF]/20">
+              <Home className="w-4 h-4" />
+              Home
+            </a>
+            <a href="#features" className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-muted-foreground hover:bg-muted text-sm font-bold transition-all">
+              <Sparkles className="w-4 h-4" />
+              Features
+            </a>
+            <a href="#about" className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-muted-foreground hover:bg-muted text-sm font-bold transition-all">
+              <User2 className="w-4 h-4" />
+              About
+            </a>
+            <a href="#contact" className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-muted-foreground hover:bg-muted text-sm font-bold transition-all">
+              <Mail className="w-4 h-4" />
+              Contact
+            </a>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="hidden lg:flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-[#00AEEF]/20 text-[#00AEEF] shadow-sm group cursor-pointer hover:border-[#00AEEF]/40 transition-all">
+              <Zap className="w-4 h-4" />
+              <span className="text-xs font-bold whitespace-nowrap">AI Event @ ₹99</span>
+              <div className="w-5 h-3.5 bg-red-500 rounded text-[8px] flex items-center justify-center text-white font-black">NEW</div>
+            </div>
+            
+            <button 
+              onClick={onLogin}
+              className="bg-[#00AEEF] hover:brightness-110 text-white px-8 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg shadow-[#00AEEF]/20 active:scale-95 flex items-center gap-2"
+            >
+              <Fingerprint className="w-4 h-4" />
+              Sign In
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <section id="home" className="pt-48 pb-24 px-6 relative overflow-hidden">
+        <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-16 items-center">
+          <div className="space-y-8">
+            <div className="space-y-4">
+              <p className="text-[#00AEEF] font-black text-xs uppercase tracking-widest">India's Only Student-Built AI Tutor</p>
+              <h1 className="text-6xl md:text-7xl font-black tracking-tight leading-[1] text-[#0F172A]">
+                Don't just get answers. <br />
+                <span className="text-[#00AEEF]">Understand</span> the concept.
+              </h1>
+            </div>
+            
+            <div className="space-y-6">
+              <p className="text-lg text-muted-foreground font-medium leading-relaxed max-w-xl">
+                Other AI tools give you copy-paste answers. Vidnia teaches you <b>how</b> to solve it — with visual diagrams, step-by-step breakdowns, and AI-generated video lessons.
+              </p>
+              <p className="text-sm text-muted-foreground/80 font-bold">
+                CBSE/ICSE/State board aligned · Works on web + WhatsApp · AI Event @ ₹99
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              <button 
+                onClick={onLogin}
+                className="w-full sm:w-auto px-10 py-5 bg-[#00AEEF] text-white rounded-2xl font-black text-sm transition-all shadow-2xl shadow-[#00AEEF]/40 hover:scale-105 active:scale-95"
+              >
+                Solve Homework Now — Free
+              </button>
+              <button 
+                onClick={onLogin}
+                className="w-full sm:w-auto px-10 py-5 bg-white border border-muted text-muted-foreground hover:bg-muted rounded-2xl font-black text-sm transition-all"
+              >
+                See Best AI Tutor in India
+              </button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-10 pt-6">
+              <div className="flex items-center gap-3">
+                <Users className="w-5 h-5 text-[#00AEEF]" />
+                <span className="text-sm font-bold text-[#0F172A]"><b>130+</b> students</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <HelpCircle className="w-5 h-5 text-[#00AEEF]" />
+                <span className="text-sm font-bold text-[#0F172A]"><b>400+</b> questions solved</span>
+              </div>
+              <div className="flex text-[#00AEEF] gap-0.5">
+                {[1,2,3,4,5].map(i => <Star key={i} className="w-4 h-4 fill-current" />)}
+              </div>
+            </div>
+          </div>
+
+          <div className="relative">
+            <div className="absolute -inset-10 bg-[#00AEEF]/10 blur-[100px] rounded-full animate-pulse" />
+            <motion.div 
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="relative p-3 bg-white rounded-[3.5rem] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.15)] border border-white/40"
+            >
+              <img 
+                src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&q=80&w=1200" 
+                alt="AI Tutor Interface" 
+                className="w-full h-auto rounded-[2.8rem] shadow-inner"
+              />
+              <div className="absolute -bottom-8 -left-8 glass-card p-6 rounded-3xl border-white/60 shadow-2xl max-w-[240px] space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-[#0F172A]">Neural Engine Online</span>
+                </div>
+                <div className="font-bold text-xs leading-relaxed text-[#00AEEF] italic font-mono">
+                  "Synthesizing cognitive map for photosynthesis mechanisms..."
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* Comparison Section */}
+      <section id="features" className="py-20 px-6 bg-slate-50/50 relative">
+        <div className="max-w-4xl mx-auto space-y-12">
+          <div className="text-center space-y-4">
+            <div className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Why MentorMind?</div>
+            <h2 className="text-4xl font-black tracking-tight text-[#1A1A1A]">Not just another homework bot</h2>
+            <p className="text-muted-foreground font-medium">Most AI tools just spit out answers. MentorMind is designed to make you <b>actually learn</b>.</p>
+          </div>
+
+          <div className="glass-panel overflow-hidden rounded-[2.5rem] border-white/60 shadow-2xl">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-muted">
+                  <th className="p-6 text-xs font-black uppercase tracking-widest text-muted-foreground w-1/2">Feature</th>
+                  <th className="p-6 text-xs font-black uppercase tracking-widest text-primary text-center">MentorMind</th>
+                  <th className="p-6 text-xs font-black uppercase tracking-widest text-muted-foreground text-center">Standard AI</th>
+                </tr>
+              </thead>
+              <tbody className="text-sm font-medium">
+                {[
+                  "Teaches understanding, not just answers",
+                  "Neural mindmaps & cognitive diagrams",
+                  "Personalized academic strategy",
+                  "AI-powered neural voice cloning",
+                  "Interactive Subject Specialists",
+                  "Built by students, for students"
+                ].map((feature, i) => (
+                  <tr key={i} className={cn("border-b border-muted last:border-0", i % 2 === 0 ? "bg-white/50" : "")}>
+                    <td className="p-6 text-[#1A1A1A]">{feature}</td>
+                    <td className="p-6 text-center">
+                      <div className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary">
+                        <Check className="w-4 h-4" />
+                      </div>
+                    </td>
+                    <td className="p-6 text-center text-muted-foreground/30">
+                      <Plus className="w-4 h-4 rotate-45 inline" />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      {/* Three Steps */}
+      <section className="py-20 px-6">
+        <div className="max-w-7xl mx-auto space-y-16">
+          <div className="text-center space-y-4">
+            <h2 className="text-4xl font-black tracking-tight text-[#1A1A1A]">Three steps to better learning</h2>
+          </div>
+          
+          <div className="grid md:grid-cols-3 gap-12">
+            {[
+              {
+                title: "Upload your problem",
+                desc: "Type a question, paste text, or upload an image of your homework.",
+                img: "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&q=80&w=400",
+                icon: <Upload className="w-6 h-6" />
+              },
+              {
+                title: "Get step-by-step help",
+                desc: "Our AI breaks down the problem and explains concepts at your level.",
+                img: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&q=80&w=400",
+                icon: <Brain className="w-6 h-6" />
+              },
+              {
+                title: "Practice and master",
+                desc: "Use flashcards and quizzes to reinforce what you've learned.",
+                img: "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&q=80&w=400",
+                icon: <CheckCircle2 className="w-6 h-6" />
+              }
+            ].map((step, i) => (
+              <div key={i} className="group space-y-6 text-center">
+                <div className="relative aspect-video rounded-[2rem] overflow-hidden shadow-xl border border-muted group-hover:border-primary/30 transition-all">
+                  <img src={step.img} alt={step.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                  <div className="absolute top-4 right-4 w-12 h-12 bg-white/90 backdrop-blur-md rounded-2xl flex items-center justify-center text-primary shadow-lg">
+                    {step.icon}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-xl font-black text-[#1A1A1A]">{step.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{step.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Grid Features */}
+      <section id="about" className="py-20 px-6 bg-[#1A1A1A] text-white rounded-[3rem] mx-6 mb-20 shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-full bg-primary/10 -z-10" />
+        <div className="max-w-7xl mx-auto space-y-16">
+          <div className="text-center space-y-4">
+            <div className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Why Choose Us</div>
+            <h2 className="text-5xl font-black tracking-tight">Everything you need to succeed 🎯</h2>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {[
+              { title: "Interactive Chat", desc: "Ask questions in a natural conversation with subject experts.", icon: <MessageSquare /> },
+              { title: "All Subjects", desc: "Get help with math, science, english, history, and more.", icon: <BookOpen className="w-6 h-6" /> },
+              { title: "Step-by-step Solutions", desc: "Receive detailed explanations, not just final answers.", icon: <Zap /> },
+              { title: "Instant Help", desc: "Available 24/7 whenever you need homework support.", icon: <Clock /> }
+            ].map((feature, i) => (
+              <div key={i} className="p-8 rounded-[2rem] bg-white/5 border border-white/10 hover:bg-white/10 transition-all group">
+                <div className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all mb-6">
+                  {React.cloneElement(feature.icon as React.ReactElement, { className: "w-6 h-6" } as any)}
+                </div>
+                <h3 className="text-xl font-bold mb-2">{feature.title}</h3>
+                <p className="text-sm text-white/50 leading-relaxed font-medium">{feature.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="pt-10 flex flex-col items-center gap-8">
+             <div className="flex items-center gap-2 group cursor-pointer">
+              <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center shadow-lg shadow-primary/30 group-hover:rotate-12 transition-all">
+                <Play className="w-7 h-7 text-white fill-current translate-x-0.5" />
+              </div>
+              <span className="text-3xl font-black tracking-tighter text-white">MentorMind.co</span>
+            </div>
+            <button 
+              onClick={onLogin}
+              className="px-12 py-5 bg-white text-[#1A1A1A] rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] shadow-2xl hover:scale-105 transition-all"
+            >
+              Launch Your Learning Journey
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <footer className="py-10 px-6 border-t border-muted">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+          <p className="text-xs text-muted-foreground font-medium">© 2026 MentorMind Interface. Cognitive Democratization Protocol.</p>
+          <div className="flex items-center gap-8">
+             <div className="flex items-center gap-6 text-muted-foreground">
+                <Twitter className="w-4 h-4 cursor-pointer hover:text-primary" />
+                <Github className="w-4 h-4 cursor-pointer hover:text-primary" />
+                <Linkedin className="w-4 h-4 cursor-pointer hover:text-primary" />
+             </div>
+          </div>
+        </div>
+      </footer>
+    </div>
   );
 }
 

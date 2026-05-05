@@ -39,19 +39,19 @@
     --card-foreground: #1A1A1A;
     --popover: #FFFFFF;
     --popover-foreground: #1A1A1A;
-    --primary: #9C27B0; /* The magenta from Theme.tsx */
+    --primary: #00AEEF; /* Vidnia Cyan */
     --primary-foreground: #FFFFFF;
-    --secondary: #F3E5F5;
-    --secondary-foreground: #9C27B0;
+    --secondary: #E0F7FA;
+    --secondary-foreground: #00AEEF;
     --muted: #F8FAFC;
     --muted-foreground: #64748B;
-    --accent: #E1F5FE; /* Light blue accent */
-    --accent-foreground: #1E88E5;
+    --accent: #F1F5F9;
+    --accent-foreground: #00AEEF;
     --destructive: #EF4444;
     --border: #E2E8F0;
     --input: #E2E8F0;
-    --ring: #9C27B0;
-    --radius: 1rem;
+    --ring: #00AEEF;
+    --radius: 1.25rem;
 }
 
 .dark {
@@ -61,10 +61,10 @@
     --card-foreground: #F8FAFC;
     --popover: #0F172A;
     --popover-foreground: #F8FAFC;
-    --primary: #9C27B0;
+    --primary: #00AEEF;
     --primary-foreground: #FFFFFF;
-    --secondary: #2E1065;
-    --secondary-foreground: #9C27B0;
+    --secondary: #083344;
+    --secondary-foreground: #00AEEF;
     --muted: #1E293B;
     --muted-foreground: #94A3B8;
     --accent: #0C4A6E;
@@ -72,10 +72,13 @@
     --destructive: #EF4444;
     --border: #334155;
     --input: #334155;
-    --ring: #9C27B0;
+    --ring: #00AEEF;
 }
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
   * {
     @apply border-border outline-ring/50;
   }
@@ -177,7 +180,7 @@
 }
 
 .text-gradient {
-  background: linear-gradient(135deg, #FF8A65 0%, #9C27B0 50%, #2196F3 100%);
+  background: linear-gradient(135deg, #00AEEF 0%, #0077B6 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
